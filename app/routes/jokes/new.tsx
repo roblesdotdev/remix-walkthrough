@@ -1,7 +1,14 @@
-import { redirect, json, useActionData } from "remix";
+import {
+  redirect,
+  json,
+  useActionData,
+  LoaderFunction,
+  useCatch,
+  Link,
+} from "remix";
 import type { ActionFunction } from "remix";
 import { db } from "~/utils/db.server";
-import { requireUserId } from "~/utils/session.server";
+import { getUserId, requireUserId } from "~/utils/session.server";
 
 function validateJokeName(name: string) {
   if (name.length < 3) {
@@ -52,6 +59,14 @@ export const action: ActionFunction = async ({ request }) => {
     data: { name, content, jokesterId: userId },
   });
   return redirect(`/jokes/${joke.id}`);
+};
+
+export const loader: LoaderFunction = async ({ request }) => {
+  const userId = await getUserId(request);
+  if (!userId) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
+  return {};
 };
 
 export default function NewJokeRoute() {
@@ -111,6 +126,19 @@ export default function NewJokeRoute() {
       </form>
     </div>
   );
+}
+
+export function CatchBoundary() {
+  const caught = useCatch();
+
+  if (caught.status === 401) {
+    return (
+      <div className="error-container">
+        <p>You must be logged in to create a joke.</p>
+        <Link to="/login">Login</Link>
+      </div>
+    );
+  }
 }
 
 export function ErrorBoundary() {
